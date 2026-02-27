@@ -1,9 +1,16 @@
 package com.arp.dimdimdigaana.user.exception;
 
-public class UsernameAlreadyExistsException extends RuntimeException {
+import com.arp.dimdimdigaana.exception.AppException;
+import com.arp.dimdimdigaana.exception.ErrorCode;
+
+public class UsernameAlreadyExistsException extends AppException {
 
     public UsernameAlreadyExistsException(String username) {
-        super("Username already exists: " + username);
+        super(ErrorCode.USERNAME_ALREADY_EXISTS, "Username already exists: " + username);
+    }
+
+    public UsernameAlreadyExistsException(String username, Throwable cause) {
+        super(ErrorCode.USERNAME_ALREADY_EXISTS, "Username already exists: " + username, cause);
     }
 }
 

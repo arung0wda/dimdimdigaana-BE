@@ -18,7 +18,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    private static final String USER_NOT_FOUND_LOG = "UserEntity not found with id: {}";
 
     private final UserRepository userRepository;
 
@@ -28,7 +27,6 @@ public class UserServiceImpl implements UserService {
         log.info("Attempting to create userEntity with username: {}", request.getUsername());
 
         if (userRepository.existsByUsername(request.getUsername())) {
-            log.warn("Username already exists: {}", request.getUsername());
             throw new UsernameAlreadyExistsException(request.getUsername());
         }
 
@@ -51,10 +49,7 @@ public class UserServiceImpl implements UserService {
         log.info("Fetching userEntity with id: {}", id);
 
         UserEntity userEntity = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.warn(USER_NOT_FOUND_LOG, id);
-                    return new UserNotFoundException(id);
-                });
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         return toResponseDto(userEntity);
     }
@@ -79,15 +74,11 @@ public class UserServiceImpl implements UserService {
         log.info("Attempting to update userEntity with id: {}", id);
 
         UserEntity userEntity = userRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.warn(USER_NOT_FOUND_LOG, id);
-                    return new UserNotFoundException(id);
-                });
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         // Check uniqueness only if the username is being changed
         if (!userEntity.getUsername().equals(request.getUsername())
                 && userRepository.existsByUsername(request.getUsername())) {
-            log.warn("Cannot update: username already exists: {}", request.getUsername());
             throw new UsernameAlreadyExistsException(request.getUsername());
         }
 
@@ -108,7 +99,6 @@ public class UserServiceImpl implements UserService {
         log.info("Attempting to delete user with id: {}", id);
 
         if (!userRepository.existsById(id)) {
-            log.warn(USER_NOT_FOUND_LOG, id);
             throw new UserNotFoundException(id);
         }
 
