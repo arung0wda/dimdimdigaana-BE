@@ -2,6 +2,7 @@ package com.arp.dimdimdigaana.user.controller;
 
 import com.arp.dimdimdigaana.user.dto.UserRequestDto;
 import com.arp.dimdimdigaana.user.dto.UserResponseDto;
+import com.arp.dimdimdigaana.user.dto.UserSearchRequest;
 import com.arp.dimdimdigaana.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +51,18 @@ public class UserController {
     public ResponseEntity<List<UserResponseDto>> getAllUsers() {
         log.info("GET /api/users - getAllUsers request received");
         List<UserResponseDto> response = userService.getAllUsers();
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * POST /api/users/search
+     * Search users by dynamic filter criteria.
+     */
+    @PostMapping("/search")
+    public ResponseEntity<List<UserResponseDto>> searchUsers(@RequestBody UserSearchRequest request) {
+        log.info("POST /api/users/search - searchUsers request received with {} criteria",
+                request.getCriteria() == null ? 0 : request.getCriteria().size());
+        List<UserResponseDto> response = userService.searchUsers(request.getCriteria());
         return ResponseEntity.ok(response);
     }
 

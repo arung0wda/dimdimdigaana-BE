@@ -1,13 +1,16 @@
 package com.arp.dimdimdigaana.user.service;
 
+import com.arp.dimdimdigaana.user.dto.SearchCriteria;
 import com.arp.dimdimdigaana.user.dto.UserRequestDto;
 import com.arp.dimdimdigaana.user.dto.UserResponseDto;
 import com.arp.dimdimdigaana.user.entity.UserEntity;
 import com.arp.dimdimdigaana.user.exception.UserNotFoundException;
 import com.arp.dimdimdigaana.user.exception.UsernameAlreadyExistsException;
 import com.arp.dimdimdigaana.user.repository.UserRepository;
+import com.arp.dimdimdigaana.user.specification.UserSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,6 +107,22 @@ public class UserServiceImpl implements UserService {
 
         userRepository.deleteById(id);
         log.info("UserEntity deleted successfully with id: {}", id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponseDto> searchUsers(List<SearchCriteria> criteria) {
+        log.info("Searching users with {} criteria", criteria == null ? 0 : criteria.size());
+
+        Specification<UserEntity> spec = UserSpecification.buildFromCriteria(criteria);
+
+        List<UserResponseDto> results = userRepository.findAll(spec)
+                .stream()
+                .map(this::toResponseDto)
+                .toList();
+
+        log.info("Search returned {} users", results.size());
+        return results;
     }
 
     private UserResponseDto toResponseDto(UserEntity userEntity) {

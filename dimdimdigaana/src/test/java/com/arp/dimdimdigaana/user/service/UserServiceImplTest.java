@@ -1,5 +1,7 @@
 package com.arp.dimdimdigaana.user.service;
 
+import com.arp.dimdimdigaana.user.dto.SearchCriteria;
+import com.arp.dimdimdigaana.user.dto.SearchOperation;
 import com.arp.dimdimdigaana.user.dto.UserRequestDto;
 import com.arp.dimdimdigaana.user.dto.UserResponseDto;
 import com.arp.dimdimdigaana.user.entity.UserEntity;
@@ -14,8 +16,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -260,6 +264,199 @@ class UserServiceImplTest {
                     .hasMessageContaining(USER_ID.toString());
 
             then(userRepository).should(never()).deleteById(any());
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // searchUsers
+    // ══════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("searchUsers")
+    class SearchUsers {
+
+        private UserEntity secondEntity;
+
+        @BeforeEach
+        void setUpSearch() {
+            secondEntity = UserEntity.builder()
+                    .id(2L).username("janedoe").firstName("Jane")
+                    .lastName("Doe").dob(LocalDate.of(1995, 5, 20)).build();
+        }
+
+        @Test
+        @DisplayName("returns all users when criteria list is null")
+        @SuppressWarnings("unchecked")
+        void searchUsers_nullCriteria_returnsAll() {
+            given(userRepository.findAll(any(Specification.class)))
+                    .willReturn(List.of(savedEntity, secondEntity));
+
+            List<UserResponseDto> result = userService.searchUsers(null);
+
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(UserResponseDto::getUsername)
+                    .containsExactly(USERNAME, "janedoe");
+            then(userRepository).should().findAll(any(Specification.class));
+        }
+
+        @Test
+        @DisplayName("returns all users when criteria list is empty")
+        @SuppressWarnings("unchecked")
+        void searchUsers_emptyCriteria_returnsAll() {
+            given(userRepository.findAll(any(Specification.class)))
+                    .willReturn(List.of(savedEntity, secondEntity));
+
+            List<UserResponseDto> result = userService.searchUsers(Collections.emptyList());
+
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(UserResponseDto::getUsername)
+                    .containsExactly(USERNAME, "janedoe");
+        }
+
+        @Test
+        @DisplayName("returns matching users for a single EQUALS criterion")
+        @SuppressWarnings("unchecked")
+        void searchUsers_singleEqualsCriterion_returnsMatchingUsers() {
+            SearchCriteria criteria = SearchCriteria.builder()
+                    .field("username")
+                    .operation(SearchOperation.EQUALS)
+                    .value(USERNAME)
+                    .build();
+
+            given(userRepository.findAll(any(Specification.class)))
+                    .willReturn(List.of(savedEntity));
+
+            List<UserResponseDto> result = userService.searchUsers(List.of(criteria));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getUsername()).isEqualTo(USERNAME);
+            assertThat(result.get(0).getId()).isEqualTo(USER_ID);
+        }
+
+        @Test
+        @DisplayName("returns matching users for a CONTAINS criterion")
+        @SuppressWarnings("unchecked")
+        void searchUsers_containsCriterion_returnsMatchingUsers() {
+            SearchCriteria criteria = SearchCriteria.builder()
+                    .field("firstName")
+                    .operation(SearchOperation.CONTAINS)
+                    .value("oh")
+                    .build();
+
+            given(userRepository.findAll(any(Specification.class)))
+                    .willReturn(List.of(savedEntity));
+
+            List<UserResponseDto> result = userService.searchUsers(List.of(criteria));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getFirstName()).isEqualTo(FIRST);
+        }
+
+        @Test
+        @DisplayName("returns matching users for multiple AND criteria")
+        @SuppressWarnings("unchecked")
+        void searchUsers_multipleCriteria_returnsMatchingUsers() {
+            SearchCriteria firstNameCriteria = SearchCriteria.builder()
+                    .field("firstName")
+                    .operation(SearchOperation.EQUALS)
+                    .value("Jane")
+                    .build();
+            SearchCriteria lastNameCriteria = SearchCriteria.builder()
+                    .field("lastName")
+                    .operation(SearchOperation.EQUALS)
+                    .value("Doe")
+                    .build();
+
+            given(userRepository.findAll(any(Specification.class)))
+                    .willReturn(List.of(secondEntity));
+
+            List<UserResponseDto> result = userService.searchUsers(
+                    List.of(firstNameCriteria, lastNameCriteria));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getFirstName()).isEqualTo("Jane");
+            assertThat(result.get(0).getLastName()).isEqualTo("Doe");
+        }
+
+        @Test
+        @DisplayName("returns empty list when no users match the criteria")
+        @SuppressWarnings("unchecked")
+        void searchUsers_noMatch_returnsEmpty() {
+            SearchCriteria criteria = SearchCriteria.builder()
+                    .field("username")
+                    .operation(SearchOperation.EQUALS)
+                    .value("nonexistent")
+                    .build();
+
+            given(userRepository.findAll(any(Specification.class)))
+                    .willReturn(List.of());
+
+            List<UserResponseDto> result = userService.searchUsers(List.of(criteria));
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("returns matching users for a BETWEEN criterion on dob")
+        @SuppressWarnings("unchecked")
+        void searchUsers_betweenCriterion_returnsMatchingUsers() {
+            SearchCriteria criteria = SearchCriteria.builder()
+                    .field("dob")
+                    .operation(SearchOperation.BETWEEN)
+                    .value("1989-01-01")
+                    .valueTo("1991-12-31")
+                    .build();
+
+            given(userRepository.findAll(any(Specification.class)))
+                    .willReturn(List.of(savedEntity));
+
+            List<UserResponseDto> result = userService.searchUsers(List.of(criteria));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getDob()).isEqualTo(DOB);
+        }
+
+        @Test
+        @DisplayName("returns matching users for a STARTS_WITH criterion")
+        @SuppressWarnings("unchecked")
+        void searchUsers_startsWithCriterion_returnsMatchingUsers() {
+            SearchCriteria criteria = SearchCriteria.builder()
+                    .field("username")
+                    .operation(SearchOperation.STARTS_WITH)
+                    .value("john")
+                    .build();
+
+            given(userRepository.findAll(any(Specification.class)))
+                    .willReturn(List.of(savedEntity));
+
+            List<UserResponseDto> result = userService.searchUsers(List.of(criteria));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getUsername()).isEqualTo(USERNAME);
+        }
+
+        @Test
+        @DisplayName("correctly maps all response DTO fields from search results")
+        @SuppressWarnings("unchecked")
+        void searchUsers_mapsAllFieldsCorrectly() {
+            SearchCriteria criteria = SearchCriteria.builder()
+                    .field("id")
+                    .operation(SearchOperation.EQUALS)
+                    .value(USER_ID.toString())
+                    .build();
+
+            given(userRepository.findAll(any(Specification.class)))
+                    .willReturn(List.of(savedEntity));
+
+            List<UserResponseDto> result = userService.searchUsers(List.of(criteria));
+
+            assertThat(result).hasSize(1);
+            UserResponseDto dto = result.get(0);
+            assertThat(dto.getId()).isEqualTo(USER_ID);
+            assertThat(dto.getUsername()).isEqualTo(USERNAME);
+            assertThat(dto.getFirstName()).isEqualTo(FIRST);
+            assertThat(dto.getLastName()).isEqualTo(LAST);
+            assertThat(dto.getDob()).isEqualTo(DOB);
         }
     }
 }

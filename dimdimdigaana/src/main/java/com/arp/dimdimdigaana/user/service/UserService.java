@@ -1,5 +1,6 @@
 package com.arp.dimdimdigaana.user.service;
 
+import com.arp.dimdimdigaana.user.dto.SearchCriteria;
 import com.arp.dimdimdigaana.user.dto.UserRequestDto;
 import com.arp.dimdimdigaana.user.dto.UserResponseDto;
 
@@ -16,5 +17,7 @@ public interface UserService {
     UserResponseDto updateUser(Long id, UserRequestDto request);
 
     void deleteUser(Long id);
+
+    List<UserResponseDto> searchUsers(List<SearchCriteria> criteria);
 }
 
