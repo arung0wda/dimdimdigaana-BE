@@ -1,5 +1,7 @@
 package com.arp.dimdimdigaana.user.specification;
 
+import com.arp.dimdimdigaana.exception.AppException;
+import com.arp.dimdimdigaana.exception.ErrorCode;
 import com.arp.dimdimdigaana.user.dto.SearchCriteria;
 import com.arp.dimdimdigaana.user.entity.UserEntity;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -8,6 +10,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 /**
  * Builds predicates for the virtual "age" field.
@@ -31,8 +34,9 @@ public class AgePredicateBuilder implements PredicateBuilder {
     @Override
     public Predicate build(SearchCriteria criteria, Root<UserEntity> root, CriteriaBuilder cb) {
         Path<LocalDate> dobPath = root.get(DOB_COLUMN);
-        LocalDate today = LocalDate.now();
-        long age = Long.parseLong(criteria.getValue());
+        // Use UTC so the date boundary is stable regardless of the JVM's default timezone.
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        long age = parseAge(criteria.getValue());
 
         return switch (criteria.getOperation()) {
             case EQUALS -> agEquals(cb, dobPath, today, age);
@@ -48,6 +52,15 @@ public class AgePredicateBuilder implements PredicateBuilder {
     }
 
     // ── Helpers ─────────────────────────────────────────────────
+
+    private static long parseAge(String raw) {
+        try {
+            return Long.parseLong(raw);
+        } catch (NumberFormatException e) {
+            throw new AppException(ErrorCode.BAD_REQUEST,
+                    "Invalid age value '" + raw + "' — must be a whole number", e);
+        }
+    }
 
     /**
      * Person is exactly {@code age} years old when their dob falls in
@@ -87,7 +100,7 @@ public class AgePredicateBuilder implements PredicateBuilder {
     /** age between low..high  ⟹  dob between (today − high+1 years + 1 day) and (today − low years) */
     private Predicate ageBetween(CriteriaBuilder cb, Path<LocalDate> dob,
                                  LocalDate today, long age, String valueToStr) {
-        long ageTo = Long.parseLong(valueToStr);
+        long ageTo = parseAge(valueToStr);
         long low = Math.min(age, ageTo);
         long high = Math.max(age, ageTo);
         LocalDate dobFrom = today.minusYears(high + 1).plusDays(1);

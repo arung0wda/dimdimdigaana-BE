@@ -1,5 +1,7 @@
 package com.arp.dimdimdigaana.user.specification;
 
+import com.arp.dimdimdigaana.exception.AppException;
+import com.arp.dimdimdigaana.exception.ErrorCode;
 import com.arp.dimdimdigaana.user.dto.SearchCriteria;
 import com.arp.dimdimdigaana.user.entity.UserEntity;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -34,7 +36,7 @@ public class NumericPredicateBuilder implements PredicateBuilder {
     @Override
     public Predicate build(SearchCriteria criteria, Root<UserEntity> root, CriteriaBuilder cb) {
         Path<Long> path = root.get(criteria.getField());
-        Long val = Long.parseLong(criteria.getValue());
+        Long val = parseLong(criteria.getValue(), criteria.getField());
 
         return switch (criteria.getOperation()) {
             case EQUALS -> cb.equal(path, val);
@@ -44,13 +46,21 @@ public class NumericPredicateBuilder implements PredicateBuilder {
             case GREATER_THAN_OR_EQUAL -> cb.greaterThanOrEqualTo(path, val);
             case LESS_THAN_OR_EQUAL -> cb.lessThanOrEqualTo(path, val);
             case BETWEEN -> {
-                Long valTo = Long.parseLong(criteria.getValueTo());
+                Long valTo = parseLong(criteria.getValueTo(), criteria.getField());
                 yield cb.between(path, val, valTo);
             }
             default -> throw unsupported(criteria);
         };
     }
 
+    private static Long parseLong(String raw, String field) {
+        try {
+            return Long.parseLong(raw);
+        } catch (NumberFormatException e) {
+            throw new AppException(ErrorCode.BAD_REQUEST,
+                    "Invalid numeric value '" + raw + "' for field '" + field + "'", e);
+        }
+    }
 
     private static IllegalArgumentException unsupported(SearchCriteria c) {
         return new IllegalArgumentException(

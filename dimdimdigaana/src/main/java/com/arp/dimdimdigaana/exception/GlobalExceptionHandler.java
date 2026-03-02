@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.Instant;
+
 /**
  * Single, global exception handler for the entire application.
  * <p>
@@ -128,6 +130,7 @@ public class GlobalExceptionHandler {
                                                         HttpStatus status,
                                                         HttpServletRequest request) {
         ErrorResponse body = ErrorResponse.builder()
+                .timestamp(Instant.now().toString())
                 .code(code)
                 .message(message)
                 .status(status.value())

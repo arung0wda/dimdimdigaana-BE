@@ -1,5 +1,7 @@
 package com.arp.dimdimdigaana.user.specification;
 
+import com.arp.dimdimdigaana.exception.AppException;
+import com.arp.dimdimdigaana.exception.ErrorCode;
 import com.arp.dimdimdigaana.user.dto.SearchCriteria;
 import com.arp.dimdimdigaana.user.entity.UserEntity;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -8,6 +10,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 /**
  * Builds predicates for {@link LocalDate} entity fields.
@@ -26,7 +29,7 @@ public class DatePredicateBuilder implements PredicateBuilder {
     @Override
     public Predicate build(SearchCriteria criteria, Root<UserEntity> root, CriteriaBuilder cb) {
         Path<LocalDate> path = root.get(criteria.getField());
-        LocalDate date = LocalDate.parse(criteria.getValue());
+        LocalDate date = parseDate(criteria.getValue(), criteria.getField());
 
         return switch (criteria.getOperation()) {
             case EQUALS -> cb.equal(path, date);
@@ -36,13 +39,21 @@ public class DatePredicateBuilder implements PredicateBuilder {
             case GREATER_THAN_OR_EQUAL -> cb.greaterThanOrEqualTo(path, date);
             case LESS_THAN_OR_EQUAL -> cb.lessThanOrEqualTo(path, date);
             case BETWEEN -> {
-                LocalDate dateTo = LocalDate.parse(criteria.getValueTo());
+                LocalDate dateTo = parseDate(criteria.getValueTo(), criteria.getField());
                 yield cb.between(path, date, dateTo);
             }
             default -> throw unsupported(criteria);
         };
     }
 
+    private static LocalDate parseDate(String raw, String field) {
+        try {
+            return LocalDate.parse(raw);
+        } catch (DateTimeParseException | NullPointerException e) {
+            throw new AppException(ErrorCode.BAD_REQUEST,
+                    "Invalid date value '" + raw + "' for field '" + field + "' — expected ISO-8601 (yyyy-MM-dd)", e);
+        }
+    }
 
     private static IllegalArgumentException unsupported(SearchCriteria c) {
         return new IllegalArgumentException(

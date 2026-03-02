@@ -185,11 +185,11 @@ class UserServiceImplTest {
         @DisplayName("updates user when same username is kept")
         void updateUser_sameUsername_success() {
             given(userRepository.findById(USER_ID)).willReturn(Optional.of(savedEntity));
-            given(userRepository.save(any(UserEntity.class))).willReturn(savedEntity);
 
             UserResponseDto result = userService.updateUser(USER_ID, requestDto);
 
             assertThat(result.getUsername()).isEqualTo(USERNAME);
+            then(userRepository).should(never()).save(any());
         }
 
         @Test
@@ -197,16 +197,14 @@ class UserServiceImplTest {
         void updateUser_newUniqueUsername_success() {
             UserRequestDto newRequest = UserRequestDto.builder()
                     .username("newname").firstName(FIRST).lastName(LAST).dob(DOB).build();
-            UserEntity updatedEntity = UserEntity.builder()
-                    .id(USER_ID).username("newname").firstName(FIRST).lastName(LAST).dob(DOB).build();
 
             given(userRepository.findById(USER_ID)).willReturn(Optional.of(savedEntity));
             given(userRepository.existsByUsername("newname")).willReturn(false);
-            given(userRepository.save(any(UserEntity.class))).willReturn(updatedEntity);
 
             UserResponseDto result = userService.updateUser(USER_ID, newRequest);
 
             assertThat(result.getUsername()).isEqualTo("newname");
+            then(userRepository).should(never()).save(any());
         }
 
         @Test
@@ -247,7 +245,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("deletes user when found")
         void deleteUser_success() {
-            given(userRepository.existsById(USER_ID)).willReturn(true);
+            given(userRepository.findById(USER_ID)).willReturn(Optional.of(savedEntity));
 
             userService.deleteUser(USER_ID);
 
@@ -257,7 +255,7 @@ class UserServiceImplTest {
         @Test
         @DisplayName("throws UserNotFoundException when id does not exist")
         void deleteUser_notFound_throws() {
-            given(userRepository.existsById(USER_ID)).willReturn(false);
+            given(userRepository.findById(USER_ID)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> userService.deleteUser(USER_ID))
                     .isInstanceOf(UserNotFoundException.class)

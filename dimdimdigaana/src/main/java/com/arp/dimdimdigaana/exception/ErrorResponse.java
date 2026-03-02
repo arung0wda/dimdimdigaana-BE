@@ -17,8 +17,7 @@ import java.time.Instant;
 public class ErrorResponse {
 
     /** ISO-8601 UTC timestamp of the error */
-    @Builder.Default
-    private final String timestamp = Instant.now().toString();
+    private final String timestamp;
 
     /** Machine-readable error code (e.g. USER_NOT_FOUND) */
     private final String code;

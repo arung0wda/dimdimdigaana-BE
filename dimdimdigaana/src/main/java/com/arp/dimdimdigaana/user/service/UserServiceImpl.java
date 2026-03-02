@@ -90,10 +90,10 @@ public class UserServiceImpl implements UserService {
         userEntity.setLastName(request.getLastName());
         userEntity.setDob(request.getDob());
 
-        UserEntity updated = userRepository.save(userEntity);
-        log.info("UserEntity updated successfully with id: {}", updated.getId());
+        // No explicit save() needed — the entity is managed; Hibernate flushes on commit.
+        log.info("UserEntity updated successfully with id: {}", id);
 
-        return toResponseDto(updated);
+        return toResponseDto(userEntity);
     }
 
     @Override
@@ -101,9 +101,10 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(Long id) {
         log.info("Attempting to delete user with id: {}", id);
 
-        if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException(id);
-        }
+        // findById confirms existence and throws before we touch deleteById,
+        // avoiding the TOCTOU race of the original existsById + deleteById pattern.
+        userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         userRepository.deleteById(id);
         log.info("UserEntity deleted successfully with id: {}", id);

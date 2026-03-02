@@ -4,6 +4,7 @@ import com.arp.dimdimdigaana.user.dto.UserRequestDto;
 import com.arp.dimdimdigaana.user.dto.UserResponseDto;
 import com.arp.dimdimdigaana.user.dto.UserSearchRequest;
 import com.arp.dimdimdigaana.user.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -16,7 +17,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class UserController {
 
     private final UserService userService;
@@ -26,7 +26,7 @@ public class UserController {
      * Create a new user.
      */
     @PostMapping
-    public ResponseEntity<UserResponseDto> createUser(@RequestBody UserRequestDto request) {
+    public ResponseEntity<UserResponseDto> createUser(@Valid @RequestBody UserRequestDto request) {
         log.info("POST /api/users - createUser request received for username: {}", request.getUsername());
         UserResponseDto response = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -59,7 +59,7 @@ public class UserController {
      * Search users by dynamic filter criteria.
      */
     @PostMapping("/search")
-    public ResponseEntity<List<UserResponseDto>> searchUsers(@RequestBody UserSearchRequest request) {
+    public ResponseEntity<List<UserResponseDto>> searchUsers(@Valid @RequestBody UserSearchRequest request) {
         log.info("POST /api/users/search - searchUsers request received with {} criteria",
                 request.getCriteria() == null ? 0 : request.getCriteria().size());
         List<UserResponseDto> response = userService.searchUsers(request.getCriteria());
@@ -73,7 +73,7 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseDto> updateUser(
             @PathVariable Long id,
-            @RequestBody UserRequestDto request) {
+            @Valid @RequestBody UserRequestDto request) {
         log.info("PUT /api/users/{} - updateUser request received", id);
         UserResponseDto response = userService.updateUser(id, request);
         return ResponseEntity.ok(response);
